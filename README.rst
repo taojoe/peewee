@@ -1,5 +1,7 @@
 .. image:: http://i.imgur.com/zhcoT.png
 
+fork by joe:
+change a little to make it work with python3 and python2
 peewee
 ======
 

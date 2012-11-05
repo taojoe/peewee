@@ -18,6 +18,7 @@ import threading
 import time
 from collections import deque, namedtuple
 from copy import deepcopy
+import sys
 
 __all__ = [
     'IntegerField', 'BigIntegerField', 'PrimaryKeyField', 'FloatField', 'DoubleField',
@@ -26,7 +27,7 @@ __all__ = [
     'DQ', 'fn', 'SqliteDatabase', 'MySQLDatabase', 'PostgresqlDatabase', 'Field',
     'JOIN_LEFT_OUTER', 'JOIN_INNER', 'JOIN_FULL',
 ]
-
+py3k = sys.version_info >= (3,0,0)
 try:
     import sqlite3
 except ImportError:
@@ -274,7 +275,10 @@ class Field(Leaf):
 
     def python_value(self, value):
         return value if value is None else self.coerce(value)
-
+    #joe, add __hash__ function 
+    if py3k:
+        def __hash__(self):
+            return id(self)
 
 class IntegerField(Field):
     db_field = 'int'
@@ -334,16 +338,26 @@ class CharField(Field):
 
     def field_attributes(self):
         return {'max_length': 255}
-
-    def coerce(self, value):
-        value = unicode(value or '')
-        return value[:self.attributes['max_length']]
+    if py3k:
+        def coerce(self, value):
+            #joe, delete unicode
+            value = value or ''
+            return value[:self.attributes['max_length']]
+    else:
+        def coerce(self, value):
+            value = unicode(value or '')
+            return value[:self.attributes['max_length']]
 
 class TextField(Field):
     db_field = 'text'
+    if py3k:
+        def coerce(self, value):
+            #joe, delete unicode
+            return value or ''
+    else:
+        def coerce(self, value):
+            return unicode(value or '')
 
-    def coerce(self, value):
-        return unicode(value or '')
 
 def format_date_time(value, formats, post_process=None):
     post_process = post_process or (lambda x: x)
@@ -982,6 +996,8 @@ class QueryResultWrapper(object):
         self.__ct += 1
         self.__idx += 1
         return instance
+    #joe, fix iterator python3
+    __next__=next
 
 def returns_clone(func):
     def inner(self, *args, **kwargs):
@@ -1746,7 +1762,8 @@ class ModelOptions(object):
         return dd
 
     def get_sorted_fields(self):
-        return sorted(self.fields.items(), key=lambda (k,v): (v is self.primary_key and 1 or 2, v._order))
+        #joe, change lambda syntax
+        return sorted(self.fields.items(), key=lambda k_v: (k_v[1] is self.primary_key and 1 or 2, k_v[1]._order))
 
     def get_field_names(self):
         return [f[0] for f in self.get_sorted_fields()]
@@ -1832,8 +1849,8 @@ class BaseModel(type):
         return cls
 
 
-class Model(object):
-    __metaclass__ = BaseModel
+#joe, change metaclass to python3 
+class Model(BaseModel("Model", (object,),{})):
 
     def __init__(self, *args, **kwargs):
         self._data = self._meta.get_default_dict()
