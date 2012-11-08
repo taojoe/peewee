@@ -28,6 +28,9 @@ __all__ = [
     'JOIN_LEFT_OUTER', 'JOIN_INNER', 'JOIN_FULL',
 ]
 py3k = sys.version_info >= (3,0,0)
+#joe, import reduce
+if py3k:
+    from functools import reduce
 try:
     import sqlite3
 except ImportError:
